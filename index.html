@@ -2,348 +2,43 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <title>정자 2점 정렬 WebAR POC</title>
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.179.1/examples/jsm/"
-    }
-  }
-  </script>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>정자 기준점 AR 테스트</title>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"></script>
   <style>
-    * { box-sizing: border-box; }
-    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #111; color: #fff; }
-    canvas { display: block; }
-    #overlay { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
-    .ui { pointer-events: auto; }
-    #startScreen { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; background: linear-gradient(180deg, #151515, #080808); }
-    .card { width: min(520px, 100%); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); border-radius: 18px; padding: 22px; backdrop-filter: blur(12px); }
-    h1 { margin: 0 0 10px; font-size: 23px; }
-    p { margin: 0; line-height: 1.55; color: rgba(255,255,255,.76); }
-    button { min-height: 48px; border: 0; border-radius: 999px; padding: 0 20px; font-size: 16px; font-weight: 750; cursor: pointer; }
-    #startBtn { width: 100%; margin-top: 18px; background: #fff; color: #111; }
-    #startBtn:disabled { opacity: .45; cursor: default; }
-    #preflight { margin-top: 12px; font-size: 13px; color: rgba(255,255,255,.62); }
-    #topBar { display: none; position: absolute; top: max(14px, env(safe-area-inset-top)); left: 14px; right: 14px; align-items: flex-start; gap: 10px; }
-    #instruction { flex: 1; padding: 12px 14px; border-radius: 14px; background: rgba(0,0,0,.60); border: 1px solid rgba(255,255,255,.18); backdrop-filter: blur(9px); font-size: 14px; line-height: 1.45; }
-    #exitBtn { flex: 0 0 auto; min-height: 44px; padding: 0 15px; background: rgba(0,0,0,.60); color: #fff; border: 1px solid rgba(255,255,255,.18); }
-    #centerHint { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, 76px); padding: 8px 12px; border-radius: 999px; background: rgba(0,0,0,.56); border: 1px solid rgba(255,255,255,.18); font-size: 13px; white-space: nowrap; }
-    #bottomBar { display: none; position: absolute; left: 14px; right: 14px; bottom: max(14px, env(safe-area-inset-bottom)); gap: 10px; justify-content: center; }
-    #resetBtn { background: rgba(0,0,0,.64); color: #fff; border: 1px solid rgba(255,255,255,.22); }
-    #infoPanel { display: none; position: absolute; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); padding: 18px 18px 16px; border-radius: 20px; background: rgba(18,18,18,.92); border: 1px solid rgba(255,255,255,.18); backdrop-filter: blur(14px); }
-    #infoPanel h2 { margin: 0 46px 7px 0; font-size: 21px; }
-    #infoPanel p { font-size: 14px; }
-    #closeInfo { position: absolute; right: 12px; top: 12px; width: 42px; min-height: 42px; padding: 0; background: rgba(255,255,255,.10); color: #fff; }
-    #debug { margin-top: 12px; font-size: 12px; color: rgba(255,255,255,.55); }
+    *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f5;color:#111}
+    main{max-width:760px;margin:0 auto;padding:18px}h1{font-size:22px;margin:0 0 8px}p{line-height:1.55;color:#444;margin:0 0 14px}
+    .guide{background:#fff;border:1px solid #ddd;border-radius:14px;padding:14px;margin-bottom:14px;font-size:14px;line-height:1.55}
+    .diagram{display:flex;align-items:center;gap:12px;margin-top:10px;padding:12px;border-radius:12px;background:#f4f4f4}
+    .pad{width:54px;height:54px;border:3px solid #777;background:rgba(255,255,255,.55);border-radius:5px;flex:0 0 auto}.line{height:2px;background:#aaa;flex:1;position:relative}.line:after{content:"약 2.4m";position:absolute;left:50%;top:-22px;transform:translateX(-50%);font-size:12px;color:#666;white-space:nowrap}
+    model-viewer{width:100%;height:58vh;min-height:390px;background:#e7e7e7;border-radius:16px;overflow:hidden}
+    .ar-button{background:#111;color:#fff;border:0;border-radius:999px;padding:15px 22px;font-size:17px;font-weight:750;box-shadow:0 3px 10px rgba(0,0,0,.18)}
+    .status{margin-top:12px;padding:11px 13px;background:#fff;border:1px solid #ddd;border-radius:10px;font-size:13px;color:#555}
   </style>
 </head>
-<body>
-  <div id="overlay">
-    <div id="startScreen" class="ui">
-      <div class="card">
-        <h1>정자 WebAR 2점 정렬 테스트</h1>
-        <p>바닥의 기준점 A를 먼저 맞춘 뒤, 방향을 정할 기준점 B를 맞춥니다. 두 점으로 정자의 위치와 방향을 고정합니다.</p>
-        <button id="startBtn" disabled>모델 로딩 중…</button>
-        <div id="preflight">Android Chrome + WebXR 기준 테스트</div>
-      </div>
-    </div>
-
-    <div id="topBar">
-      <div id="instruction">바닥을 천천히 비춰주세요.</div>
-      <button id="exitBtn" class="ui" type="button">종료</button>
-    </div>
-
-    <div id="centerHint">포인트가 바닥에 잡히면 화면을 터치</div>
-
-    <div id="bottomBar" class="ui">
-      <button id="resetBtn" type="button">다시 맞추기</button>
-    </div>
-
-    <section id="infoPanel" class="ui" aria-live="polite">
-      <button id="closeInfo" type="button" aria-label="정보 닫기">✕</button>
-      <h2>정자</h2>
-      <p>정자 3D 모델 정보 팝업 테스트입니다. 실제 프로젝트에서는 문화재 명칭, 설명, 이미지, 오디오 등의 콘텐츠를 이 영역에 넣을 수 있습니다.</p>
-      <div id="debug">모델 터치 인식 성공</div>
-    </section>
+<body><main>
+  <h1>정자 기준점 AR 테스트</h1>
+  <p>정자와 함께 들어있는 두 개의 반투명 바닥 가이드를 실제 주춧돌/바닥 기준물에 겹쳐 맞춰보는 테스트입니다.</p>
+  <div class="guide"><b>맞추는 방법</b><br>① AR을 실행하고 바닥을 인식시킵니다.<br>② 모델을 이동해 첫 번째 가이드를 기준물 A에 맞춥니다.<br>③ 모델을 회전해 두 번째 가이드가 기준물 B와 겹치도록 맞춥니다.<br>④ 두 가이드가 동시에 맞으면 정자의 위치와 방향도 함께 맞습니다.
+    <div class="diagram"><div class="pad"></div><div class="line"></div><div class="pad"></div></div>
   </div>
-
-  <script type="module">
-    import * as THREE from 'three';
-    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-
-    const MODEL_URL = 'https://raw.githubusercontent.com/ahnkwangsoo/jungja-ar/main/src/assets/jungja.glb';
-    const TARGET_WIDTH_METERS = 4.0;
-
-    const overlay = document.getElementById('overlay');
-    const startScreen = document.getElementById('startScreen');
-    const startBtn = document.getElementById('startBtn');
-    const preflight = document.getElementById('preflight');
-    const topBar = document.getElementById('topBar');
-    const instruction = document.getElementById('instruction');
-    const centerHint = document.getElementById('centerHint');
-    const bottomBar = document.getElementById('bottomBar');
-    const resetBtn = document.getElementById('resetBtn');
-    const exitBtn = document.getElementById('exitBtn');
-    const infoPanel = document.getElementById('infoPanel');
-    const closeInfo = document.getElementById('closeInfo');
-
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.01, 100);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-    renderer.setSize(innerWidth, innerHeight);
-    renderer.xr.enabled = true;
-    renderer.xr.setReferenceSpaceType('local');
-    renderer.setClearAlpha(0);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    document.body.appendChild(renderer.domElement);
-
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x777777, 2.1));
-    const sun = new THREE.DirectionalLight(0xffffff, 2.0);
-    sun.position.set(2, 6, 3);
-    scene.add(sun);
-
-    const reticle = new THREE.Mesh(
-      new THREE.RingGeometry(0.11, 0.15, 40).rotateX(-Math.PI / 2),
-      new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
-    );
-    reticle.matrixAutoUpdate = false;
-    reticle.visible = false;
-    scene.add(reticle);
-
-    function makeMarker(color) {
-      const m = new THREE.Mesh(
-        new THREE.RingGeometry(0.12, 0.18, 40).rotateX(-Math.PI / 2),
-        new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })
-      );
-      m.visible = false;
-      scene.add(m);
-      return m;
-    }
-    const markerA = makeMarker(0x4dd0e1);
-    const markerB = makeMarker(0xffca28);
-
-    let modelPivot = null;
-    let modelReady = false;
-    let xrSession = null;
-    let hitTestSource = null;
-    let phase = 'A';
-    let pointA = null;
-    let pointB = null;
-    const tempPosition = new THREE.Vector3();
-    const raycaster = new THREE.Raycaster();
-    const tempMatrix = new THREE.Matrix4();
-
-    const loader = new GLTFLoader();
-    loader.load(MODEL_URL, (gltf) => {
-      const model = gltf.scene;
-      model.traverse((o) => {
-        if (o.isMesh) {
-          o.frustumCulled = false;
-        }
-      });
-
-      let box = new THREE.Box3().setFromObject(model);
-      const size = box.getSize(new THREE.Vector3());
-      const horizontal = Math.max(size.x, size.z);
-      const s = horizontal > 0 ? TARGET_WIDTH_METERS / horizontal : 1;
-      model.scale.setScalar(s);
-      model.updateMatrixWorld(true);
-
-      box = new THREE.Box3().setFromObject(model);
-      const center = box.getCenter(new THREE.Vector3());
-      model.position.x -= center.x;
-      model.position.z -= center.z;
-      model.position.y -= box.min.y;
-
-      modelPivot = new THREE.Group();
-      modelPivot.add(model);
-      modelPivot.visible = false;
-      scene.add(modelPivot);
-      modelReady = true;
-      startBtn.disabled = false;
-      startBtn.textContent = 'AR 시작';
-      preflight.textContent = '모델 준비 완료 · 약 4m 폭으로 자동 스케일';
-    }, undefined, (err) => {
-      console.error(err);
-      startBtn.textContent = '모델 로딩 실패';
-      preflight.textContent = 'GLB 파일을 불러오지 못했습니다.';
-    });
-
-    async function checkXR() {
-      if (!navigator.xr) {
-        preflight.textContent = '이 브라우저는 WebXR을 지원하지 않습니다. Android Chrome에서 열어주세요.';
-        return;
-      }
-      try {
-        const ok = await navigator.xr.isSessionSupported('immersive-ar');
-        if (!ok) {
-          preflight.textContent = '이 기기/브라우저는 immersive WebXR AR을 지원하지 않습니다.';
-        }
-      } catch (e) {
-        console.warn(e);
-      }
-    }
-    checkXR();
-
-    async function startAR() {
-      if (!modelReady || !navigator.xr) return;
-      try {
-        const session = await navigator.xr.requestSession('immersive-ar', {
-          requiredFeatures: ['hit-test'],
-          optionalFeatures: ['dom-overlay', 'local-floor'],
-          domOverlay: { root: overlay }
-        });
-
-        if (!session.domOverlayState) {
-          await session.end();
-          preflight.textContent = '이 브라우저에서는 AR 위 HTML UI(DOM Overlay)를 사용할 수 없습니다.';
-          return;
-        }
-
-        xrSession = session;
-        await renderer.xr.setSession(session);
-        const viewerSpace = await session.requestReferenceSpace('viewer');
-        hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
-
-        startScreen.style.display = 'none';
-        topBar.style.display = 'flex';
-        centerHint.style.display = 'block';
-        resetAlignment();
-        session.addEventListener('end', onSessionEnd, { once: true });
-      } catch (e) {
-        console.error(e);
-        preflight.textContent = `AR 시작 실패: ${e.message || e}`;
-      }
-    }
-
-    function onSessionEnd() {
-      hitTestSource?.cancel?.();
-      hitTestSource = null;
-      xrSession = null;
-      reticle.visible = false;
-      topBar.style.display = 'none';
-      centerHint.style.display = 'none';
-      bottomBar.style.display = 'none';
-      infoPanel.style.display = 'none';
-      startScreen.style.display = 'grid';
-      startBtn.textContent = 'AR 다시 시작';
-    }
-
-    function resetAlignment() {
-      phase = 'A';
-      pointA = null;
-      pointB = null;
-      markerA.visible = false;
-      markerB.visible = false;
-      if (modelPivot) modelPivot.visible = false;
-      infoPanel.style.display = 'none';
-      bottomBar.style.display = 'none';
-      instruction.innerHTML = '<b>1/2 기준점 A</b><br>실제 바닥의 기준 돌/모서리에 흰 포인트를 맞춘 뒤 화면을 터치하세요.';
-      centerHint.textContent = '기준점 A에 포인트를 맞추고 터치';
-    }
-
-    function selectAtReticle() {
-      tempPosition.setFromMatrixPosition(reticle.matrix);
-
-      if (phase === 'A') {
-        pointA = tempPosition.clone();
-        markerA.position.copy(pointA);
-        markerA.visible = true;
-        phase = 'B';
-        bottomBar.style.display = 'flex';
-        instruction.innerHTML = '<b>2/2 방향점 B</b><br>A에서 떨어진 두 번째 돌/모서리에 포인트를 맞추세요. A→B 방향이 정자의 정면 기준이 됩니다.';
-        centerHint.textContent = '방향점 B에 맞추고 터치';
-        return;
-      }
-
-      if (phase === 'B') {
-        const candidate = tempPosition.clone();
-        const flat = candidate.clone().sub(pointA);
-        flat.y = 0;
-        if (flat.length() < 0.3) {
-          instruction.innerHTML = '<b>B가 너무 가깝습니다.</b><br>A에서 최소 30cm 이상 떨어진 점을 선택하세요.';
-          return;
-        }
-        pointB = candidate;
-        markerB.position.copy(pointB);
-        markerB.visible = true;
-
-        const dir = pointB.clone().sub(pointA);
-        dir.y = 0;
-        const yaw = Math.atan2(dir.x, dir.z);
-
-        modelPivot.position.copy(pointA);
-        modelPivot.rotation.set(0, yaw, 0);
-        modelPivot.visible = true;
-        phase = 'placed';
-        reticle.visible = false;
-        centerHint.textContent = '정자를 직접 터치해보세요';
-        instruction.innerHTML = '<b>배치 완료</b><br>정자를 터치하면 하단 정보 팝업이 열립니다. 위치가 어긋나면 “다시 맞추기”를 누르세요.';
-      }
-    }
-
-    function tryOpenModelInfo(controller) {
-      if (!modelPivot?.visible) return;
-      tempMatrix.identity().extractRotation(controller.matrixWorld);
-      raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-      raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix).normalize();
-      const hit = raycaster.intersectObject(modelPivot, true);
-      if (hit.length) {
-        infoPanel.style.display = 'block';
-        bottomBar.style.display = 'none';
-      }
-    }
-
-    const controller = renderer.xr.getController(0);
-    controller.addEventListener('select', () => {
-      if (infoPanel.style.display === 'block') return;
-      if (phase === 'placed') {
-        tryOpenModelInfo(controller);
-        return;
-      }
-      if (reticle.visible) selectAtReticle();
-    });
-    scene.add(controller);
-
-    overlay.addEventListener('beforexrselect', (event) => {
-      if (event.target.closest('.ui')) event.preventDefault();
-    });
-
-    startBtn.addEventListener('click', startAR);
-    resetBtn.addEventListener('click', resetAlignment);
-    closeInfo.addEventListener('click', () => {
-      infoPanel.style.display = 'none';
-      if (phase === 'placed') bottomBar.style.display = 'flex';
-    });
-    exitBtn.addEventListener('click', () => xrSession?.end());
-
-    renderer.setAnimationLoop((time, frame) => {
-      if (frame && hitTestSource && phase !== 'placed') {
-        const referenceSpace = renderer.xr.getReferenceSpace();
-        const results = frame.getHitTestResults(hitTestSource);
-        if (results.length) {
-          const pose = results[0].getPose(referenceSpace);
-          if (pose) {
-            reticle.visible = true;
-            reticle.matrix.fromArray(pose.transform.matrix);
-          }
-        } else {
-          reticle.visible = false;
-        }
-      } else if (phase === 'placed') {
-        reticle.visible = false;
-      }
-      renderer.render(scene, camera);
-    });
-
-    addEventListener('resize', () => {
-      camera.aspect = innerWidth / innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(innerWidth, innerHeight);
-    });
-  </script>
-</body>
-</html>
+  <model-viewer id="mv"
+    src="https://raw.githubusercontent.com/ahnkwangsoo/floor-ar-test/main/assets/jungja_guides.glb"
+    alt="정자와 두 개의 기준점 가이드"
+    ar
+    ar-modes="webxr scene-viewer quick-look"
+    ar-placement="floor"
+    ar-scale="fixed"
+    camera-controls
+    shadow-intensity="1"
+    exposure="1">
+    <button class="ar-button" slot="ar-button">AR로 보기</button>
+  </model-viewer>
+  <div id="status" class="status">모델 로딩 중…</div>
+</main>
+<script>
+const mv=document.getElementById('mv');const status=document.getElementById('status');
+mv.addEventListener('load',()=>status.textContent='모델 로딩 완료 · iPhone은 AR Quick Look, Android는 WebXR/Scene Viewer로 실행됩니다.');
+mv.addEventListener('error',()=>status.textContent='모델을 불러오지 못했습니다.');
+mv.addEventListener('ar-status',e=>status.textContent='AR 상태: '+e.detail.status);
+</script></body></html>
