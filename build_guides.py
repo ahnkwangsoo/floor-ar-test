@@ -24,9 +24,9 @@ for name, geom in scene.geometry.items():
             alpha = np.full((colors.shape[0], 1), 255, dtype=colors.dtype)
             visual.vertex_colors = np.concatenate([colors, alpha], axis=1)
 
-    # TextureVisuals can retain a custom vertex color attribute named 'color'.
+    # TextureVisuals stores custom per-vertex values in a DataStore.
     vattrs = getattr(visual, 'vertex_attributes', None)
-    if isinstance(vattrs, dict) and 'color' in vattrs:
+    if vattrs is not None and 'color' in vattrs:
         colors = np.asarray(vattrs['color'])
         print('COLOR ATTR', name, colors.shape, colors.dtype)
         if colors.ndim == 2 and colors.shape[1] == 3:
