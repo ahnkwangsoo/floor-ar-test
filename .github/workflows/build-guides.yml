@@ -1,0 +1,26 @@
+name: Build AR guide model
+on:
+  push:
+    paths:
+      - 'build_guides.py'
+      - '.github/workflows/build-guides.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install trimesh numpy scipy
+      - run: python build_guides.py
+      - name: Commit generated model
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/jungja_guides.glb
+          git diff --cached --quiet || git commit -m 'Build guide-enabled AR model'
+          git push
