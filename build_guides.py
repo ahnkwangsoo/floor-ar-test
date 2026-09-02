@@ -11,48 +11,45 @@ OUT.parent.mkdir(parents=True, exist_ok=True)
 urllib.request.urlretrieve(SRC, TMP)
 scene=trimesh.load(TMP, force='scene')
 
-# Diagnose and normalize any RGB-only color data before GLB export.
+# Normalize color attributes to RGBA for trimesh 5.x GLB export.
 for name, geom in scene.geometry.items():
     visual = getattr(geom, 'visual', None)
-    kind = getattr(visual, 'kind', None) if visual is not None else None
-    try:
+    if visual is None:
+        continue
+
+    # ColorVisuals path
+    if getattr(visual, 'kind', None) in ('vertex', 'face'):
         colors = np.asarray(visual.vertex_colors)
-        print('VIS', name, type(visual).__name__, 'kind=', kind, 'vertex_colors=', colors.shape)
         if colors.ndim == 2 and colors.shape[1] == 3:
             alpha = np.full((colors.shape[0], 1), 255, dtype=colors.dtype)
             visual.vertex_colors = np.concatenate([colors, alpha], axis=1)
+
+    # TextureVisuals can retain a custom vertex color attribute named 'color'.
+    vattrs = getattr(visual, 'vertex_attributes', None)
+    if isinstance(vattrs, dict) and 'color' in vattrs:
+        colors = np.asarray(vattrs['color'])
+        print('COLOR ATTR', name, colors.shape, colors.dtype)
+        if colors.ndim == 2 and colors.shape[1] == 3:
+            alpha_value = 255 if np.issubdtype(colors.dtype, np.integer) else 1.0
+            alpha = np.full((colors.shape[0], 1), alpha_value, dtype=colors.dtype)
+            vattrs['color'] = np.concatenate([colors, alpha], axis=1)
         elif colors.ndim == 1 and colors.size % 3 == 0:
             colors = colors.reshape((-1, 3))
-            alpha = np.full((colors.shape[0], 1), 255, dtype=colors.dtype)
-            visual.vertex_colors = np.concatenate([colors, alpha], axis=1)
-    except Exception as exc:
-        print('VIS', name, type(visual).__name__ if visual is not None else None, 'kind=', kind, 'no vertex colors:', exc)
-
-    attrs = getattr(geom, 'vertex_attributes', {})
-    for key, value in attrs.items():
-        arr = np.asarray(value)
-        print('ATTR', name, key, arr.shape, arr.dtype)
-        if key.upper() in ('COLOR_0', '_COLOR_0'):
-            if arr.ndim == 2 and arr.shape[1] == 3:
-                alpha = np.ones((arr.shape[0], 1), dtype=arr.dtype)
-                geom.vertex_attributes[key] = np.concatenate([arr, alpha], axis=1)
-            elif arr.ndim == 1 and arr.size % 3 == 0:
-                arr = arr.reshape((-1, 3))
-                alpha = np.ones((arr.shape[0], 1), dtype=arr.dtype)
-                geom.vertex_attributes[key] = np.concatenate([arr, alpha], axis=1)
+            alpha_value = 255 if np.issubdtype(colors.dtype, np.integer) else 1.0
+            alpha = np.full((colors.shape[0], 1), alpha_value, dtype=colors.dtype)
+            vattrs['color'] = np.concatenate([colors, alpha], axis=1)
 
 # Normalize to approx. 4m width and place floor at Y=0.
 bmin,bmax=scene.bounds
 width=float(bmax[0]-bmin[0])
 scale=4.0/width
-T=trimesh.transformations.scale_matrix(scale)
-scene.apply_transform(T)
+scene.apply_transform(trimesh.transformations.scale_matrix(scale))
 bmin,bmax=scene.bounds
 cx=(bmin[0]+bmax[0])*0.5
 cz=(bmin[2]+bmax[2])*0.5
 scene.apply_translation((-cx,-bmin[1],-cz))
 
-# Two 70cm alignment pads, 2.4m apart, near front edge.
+# Two 70cm semi-transparent alignment pads, 2.4m apart.
 mat=trimesh.visual.material.PBRMaterial(
     name='AlignmentGuide',
     baseColorFactor=[255,255,255,105],
@@ -71,4 +68,4 @@ def pad(x,z,name):
 pad(-1.2,1.15,'Guide_A')
 pad( 1.2,1.15,'Guide_B')
 scene.export(OUT)
-print('wrote',OUT,OUT.stat().st_size)
+print('wrote', OUT, OUT.stat().st_size)
