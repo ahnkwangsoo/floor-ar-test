@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>정자 바닥 AR 테스트</title>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"></script>
+  <style>
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f5;color:#111}
+    main{max-width:760px;margin:0 auto;padding:20px} h1{font-size:22px;margin:0 0 10px} p{line-height:1.55;color:#444}
+    model-viewer{width:100%;height:68vh;min-height:420px;background:#e9e9e9;border-radius:16px;overflow:hidden}
+    .ar-button{background:#111;color:#fff;border:0;border-radius:999px;padding:15px 22px;font-size:17px;font-weight:700;cursor:pointer}
+    .status{margin-top:12px;padding:12px 14px;background:#fff;border:1px solid #ddd;border-radius:10px;font-size:14px}
+    .note{margin-top:14px;padding:14px 16px;background:#fff;border:1px solid #ddd;border-radius:12px;font-size:14px;line-height:1.6}
+  </style>
+</head>
+<body>
+<main>
+  <h1>정자 바닥 AR 테스트</h1>
+  <p>AR로 보기를 누른 뒤 바닥을 천천히 비추고 정자를 배치하세요.</p>
+
+  <model-viewer id="mv"
+    src="https://raw.githubusercontent.com/ahnkwangsoo/jungja-ar/main/src/assets/jungja.glb"
+    alt="정자 3D 모델"
+    ar
+    ar-modes="webxr scene-viewer quick-look"
+    ar-placement="floor"
+    ar-scale="fixed"
+    camera-controls
+    shadow-intensity="1"
+    exposure="1">
+    <button class="ar-button" slot="ar-button">AR로 보기</button>
+  </model-viewer>
+
+  <div id="status" class="status">상태: 모델 로딩 중...</div>
+  <div class="note">
+    <b>테스트할 것</b><br>
+    ① 바닥 인식 속도<br>
+    ② 정자가 바닥에 안정적으로 고정되는지<br>
+    ③ 좌우로 2~3m 이동해도 위치가 유지되는지<br>
+    ④ 카메라를 다른 곳으로 돌렸다가 돌아왔을 때 위치가 유지되는지
+  </div>
+</main>
+<script>
+  const mv=document.getElementById('mv');
+  const status=document.getElementById('status');
+  mv.addEventListener('load',()=>status.textContent='상태: 모델 로딩 완료 — AR로 보기를 눌러주세요');
+  mv.addEventListener('error',()=>status.textContent='상태: 모델 로딩 실패');
+  mv.addEventListener('ar-status',e=>status.textContent='AR 상태: '+e.detail.status);
+</script>
+</body>
+</html>
